@@ -1,0 +1,11 @@
+{
+    "name": "@yaqlib/workspace",
+    "version": "0.0.0",
+    "packageManager": "yarn@4.6.0",
+    "workspaces": [
+        "packages/*"
+    ],
+    "devDependencies": {
+        "nx": "20.3.2"
+    }
+}
