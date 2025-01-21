@@ -1,0 +1,19 @@
+{
+    "name": "yaqlib",
+    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "sourceRoot": "packages/yaqlib/src",
+    "projectType": "library",
+    "tags": [],
+    "targets": {
+        "build": {
+            "executor": "@nx/esbuild:esbuild",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/packages/yaqlib",
+                "main": "packages/yaqlib/src/index.ts",
+                "tsConfig": "packages/yaqlib/tsconfig.lib.json",
+                "assets": ["packages/yaqlib/*.md"]
+            }
+        }
+    }
+}
