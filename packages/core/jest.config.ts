@@ -1,5 +1,5 @@
 export default {
-    displayName: "yaqlib",
+    displayName: "@yaqlib/core",
     preset: "../../jest.preset.js",
     testEnvironment: "node",
     transform: {
@@ -9,5 +9,5 @@ export default {
         ],
     },
     moduleFileExtensions: ["ts", "js", "html"],
-    coverageDirectory: "../../coverage/packages/yaqlib",
+    coverageDirectory: "../../coverage/packages/@yaqlib/core",
 };

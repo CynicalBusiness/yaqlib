@@ -1,0 +1,22 @@
+{
+    "$schema": "https://swc.rs/schema.json",
+    "jsc": {
+        "target": "esnext",
+        "parser": {
+            "syntax": "typescript",
+            "decorators": true,
+            "dynamicImport": true
+        },
+        "keepClassNames": true
+    },
+    "module": {
+        "type": "es6"
+    },
+    "sourceMaps": true,
+    "exclude": [
+        "jest.config.ts",
+        ".*\\.spec.tsx?$",
+        ".*\\.test.tsx?$",
+        ".*.js$"
+    ]
+}

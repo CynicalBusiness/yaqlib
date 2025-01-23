@@ -1,9 +1,0 @@
-{
-    "name": "yaqlib",
-    "version": "0.0.1",
-    "type": "module",
-    "main": "./index.js",
-    "module": "./index.js",
-    "types": "./index.d.ts",
-    "private": true
-}

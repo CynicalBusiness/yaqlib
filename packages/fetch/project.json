@@ -1,0 +1,27 @@
+{
+    "name": "@yaqlib/fetch",
+    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "sourceRoot": "packages/fetch/src",
+    "projectType": "library",
+    "release": {
+        "version": {
+            "generatorOptions": {
+                "packageRoot": "dist/{projectRoot}",
+                "currentVersionResolver": "git-tag"
+            }
+        }
+    },
+    "tags": [],
+    "targets": {
+        "build": {
+            "executor": "@nx/js:swc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/packages/fetch",
+                "main": "packages/fetch/src/index.ts",
+                "tsConfig": "packages/fetch/tsconfig.lib.json",
+                "assets": []
+            }
+        }
+    }
+}

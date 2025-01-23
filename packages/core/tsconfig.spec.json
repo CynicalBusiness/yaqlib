@@ -2,9 +2,7 @@
     "extends": "./tsconfig.json",
     "compilerOptions": {
         "outDir": "../../dist/out-tsc",
-        "module": "NodeNext",
-        "moduleResolution": "nodenext",
-        "types": ["jest", "node"]
+        "types": ["jest"]
     },
     "include": [
         "jest.config.ts",

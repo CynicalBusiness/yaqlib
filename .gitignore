@@ -225,3 +225,4 @@ $RECYCLE.BIN/
 
 # Nx Stuff
 .nx/
+tmp/
