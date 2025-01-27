@@ -48,10 +48,10 @@ export abstract class RequestAdapter<
      * @param options The request to perform
      * @returns The response of the request, as an observable.
      */
-    public request(
+    public request<T>(
         route: string,
-        optionsInput?: RequestOptionsInput
-    ): Observable<RequestResponse> {
+        optionsInput?: RequestOptionsInput<T>
+    ): Observable<RequestResponse<unknown, T>> {
         const options = this.defaultRequestOptions.extend(optionsInput);
         return defer(() => this.executeRequest(route, options)).pipe(
             map((response) => new RequestResponse(response, options)),

@@ -1,57 +1,15 @@
+import {
+    ROUTE_NOT_FOUND,
+    ROUTE_OK,
+    ROUTE_UNKNOWN,
+    TestRequestAdapter,
+} from "../../test/request-adapter.js";
 import { HTTPStatus } from "./consts.js";
-import { RequestAdapter } from "./request-adapter.js";
 import { RequestError } from "./request-error.js";
-import { RequestOptions } from "./request-options.js";
-import { RequestResponseInput } from "./request.types.js";
-
-const ROUTE_OK = "ok";
-const ROUTE_NOT_FOUND = "not-found";
-const ROUTE_UNKNOWN = "unknown";
-
-class TestRequestAdapter extends RequestAdapter {
-    protected override executeRequest(
-        route: string,
-        options: RequestOptions
-    ): Promise<RequestResponseInput> {
-        switch (route) {
-            case ROUTE_OK:
-                return Promise.resolve({
-                    status: HTTPStatus.CREATED,
-                    body: options.body ?? "ok",
-                    headers: Iterator.from(options.headers).map(([k, v]) => [
-                        k,
-                        v,
-                    ]),
-                    route,
-                });
-            case ROUTE_NOT_FOUND:
-                return Promise.resolve({
-                    status: HTTPStatus.NOT_FOUND,
-                    body: "not found",
-                    headers: [],
-                    route,
-                });
-            case ROUTE_UNKNOWN:
-                return Promise.resolve({
-                    status: 999,
-                    body: "unknown",
-                    headers: [],
-                    route,
-                });
-            default:
-                return Promise.resolve({
-                    status: HTTPStatus.INTERNAL_SERVER_ERROR,
-                    body: "default",
-                    headers: [],
-                    route,
-                });
-        }
-    }
-}
 
 describe("class RequestAdapter", () => {
     describe("instance", () => {
-        const adapter = new TestRequestAdapter({});
+        const adapter = new TestRequestAdapter();
 
         describe("request", () => {
             it("should respond with successful body", async () => {

@@ -2,7 +2,9 @@ import { HTTPMethod } from "./consts.js";
 import { HeaderCollection } from "./header-collection.js";
 import { RequestOptionsInput, StatusPredicate } from "./request.types.js";
 
-export class RequestOptions<TBody = unknown> {
+export class RequestOptions<TBody = unknown>
+    implements RequestOptionsInput<TBody>
+{
     public static readonly default = new RequestOptions<never>();
 
     /**
