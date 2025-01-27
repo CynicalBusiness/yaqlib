@@ -1,13 +1,21 @@
 import {
     RequestAdapter,
+    RequestAdapterOptions,
     RequestOptions,
     RequestResponseInput,
 } from "@yaqlib/core";
 
+export interface FetchRequestAdapterOptions extends RequestAdapterOptions {
+    /**
+     * Base URL used for all requests.
+     */
+    baseUrl: string | URL;
+}
+
 /**
  * {@link RequestAdapter} implementation which utilizes {@link https://developer.mozilla.org/docs/Web/API/Window/fetch fetch} to perform the query.
  */
-export class FetchRequestAdapter extends RequestAdapter {
+export class FetchRequestAdapter extends RequestAdapter<FetchRequestAdapterOptions> {
     protected override async executeRequest(
         route: string,
         options: RequestOptions
@@ -16,7 +24,8 @@ export class FetchRequestAdapter extends RequestAdapter {
             await fetch(
                 new URL(route, this.options.baseUrl),
                 this.mapRequest(options)
-            )
+            ),
+            route
         );
     }
 
@@ -39,7 +48,8 @@ export class FetchRequestAdapter extends RequestAdapter {
         return response.blob();
     }
 
-    private mapRequest({ headers, method, body }: RequestOptions): RequestInit {
+    private mapRequest(options: RequestOptions): RequestInit {
+        const { body, headers, method } = options;
         const headersObj = new Headers();
         for (const [header, value, options] of headers) {
             if (options?.append) {
@@ -75,12 +85,13 @@ export class FetchRequestAdapter extends RequestAdapter {
     }
 
     private async mapResponse(
-        response: Response
+        response: Response,
+        route: string
     ): Promise<RequestResponseInput> {
         return {
+            route,
             status: response.status,
             headers: response.headers,
-            url: response.url,
             body: await this.extractBody(response),
         };
     }

@@ -7,29 +7,16 @@ import {
     shareReplay,
     tap,
 } from "rxjs";
-import { HTTPMethod, HTTPStatus } from "./consts.js";
 import { RequestError } from "./request-error.js";
-import {
-    RequestHeaderEntry,
-    RequestHeaderInput,
-    RequestOptions,
-    RequestOptionsInput,
-    RequestResponse,
-    RequestResponseInput,
-} from "./request.types.js";
+import { RequestOptions } from "./request-options.js";
+import { RequestResponse } from "./request-response.js";
+import { RequestOptionsInput, RequestResponseInput } from "./request.types.js";
 
 export interface RequestAdapterOptions {
     /**
-     * The base URL to use for all requests.
-     *
-     * If not given, the default base URL of the chosen adapter will be used.
-     */
-    baseUrl?: string | URL;
-
-    /**
      * Default request options to be used for all requests.
      */
-    defaults?: RequestOptionsInput;
+    defaults?: RequestOptions<never>;
 }
 
 /**
@@ -38,78 +25,17 @@ export interface RequestAdapterOptions {
  * This is an abstract base class which should be extended to implement the actual request execution logic, such as
  * `@yaqlib/fetch`'s `FetchRequestAdapter`.
  */
-export abstract class RequestAdapter {
-    /**
-     * Normalizes the input headers object into a single consistent format: an iterable of [key, value, options?] tuples.
-     *
-     * Accepts:
-     * - An object of either a header value (as a string) or a tuple of [value, options?] for each header.
-     * - An iterable of either:
-     *   - An object like above
-     *   - A tuple of [header, value, options?] for each header
-     *
-     * @param headers The headers to normalize
-     * @returns The normalized headers
-     */
-    public static *normalizeHeaders(
-        headers: RequestHeaderInput | null | undefined
-    ): Generator<RequestHeaderEntry> {
-        if (!headers) return;
-        if (typeof headers !== "object") {
-            throw new TypeError("Headers must be an object or array");
-        }
-
-        if (!(Symbol.iterator in headers)) {
-            return yield* this.normalizeHeaders(Object.entries(headers));
-        }
-
-        for (let [key, entry, options] of headers) {
-            if (typeof key !== "string") {
-                key = String(key);
-            }
-
-            if (Array.isArray(entry)) {
-                const [value, opts] = entry;
-                entry = value;
-                options = opts;
-            }
-
-            if (typeof entry !== "string") {
-                entry = String(entry);
-            }
-
-            yield [key, entry, options];
-        }
-    }
-
-    /**
-     * Creates an object from the stream of headers, grouping them by header name in order of appearance.
-     *
-     * For example, the headers `[['a', '1'], ['b', '2'], ['a', '3']]` would be converted to
-     * `{ a: ['1', '3'], b: ['2'] }`.
-     *
-     * @param headers The headers to convert
-     * @returns The headers as an object
-     */
-    public static createHeaderObject<const T extends [string, string | number]>(
-        headers: Iterable<T>
-    ) {
-        if (!(Symbol.iterator in headers)) {
-            throw new TypeError("Headers must be an iterable");
-        }
-
-        return Iterator.from(headers).reduce((o, [key, value]) => {
-            if (typeof value !== "string") value = String(value);
-            const prev = o[key];
-            o[key] = prev?.length ? [...prev, value] : [value];
-            return o;
-        }, {} as Record<string, readonly [string, ...string[]]>);
-    }
-
+export abstract class RequestAdapter<
+    TOptions extends RequestAdapterOptions = RequestAdapterOptions
+> {
     /**
      * @param options Options for the query adapter
      */
-    public constructor(public readonly options: RequestAdapterOptions = {}) {}
+    public constructor(public readonly options: TOptions) {}
+
+    public get defaultRequestOptions(): RequestOptions<never> {
+        return this.options.defaults ?? RequestOptions.default;
+    }
 
     /**
      * Initiate a request using this adapter's request engine.
@@ -126,11 +52,9 @@ export abstract class RequestAdapter {
         route: string,
         optionsInput?: RequestOptionsInput
     ): Observable<RequestResponse> {
-        const options = this.normalizeRequestOptions(optionsInput);
+        const options = this.defaultRequestOptions.extend(optionsInput);
         return defer(() => this.executeRequest(route, options)).pipe(
-            map((response) =>
-                this.normalizeResponse(response, { route, options })
-            ),
+            map((response) => new RequestResponse(response, options)),
             tap((response) => {
                 // this makes sure that each subscriber will always get the error
                 if (!response.success) {
@@ -155,75 +79,6 @@ export abstract class RequestAdapter {
         optionsInput?: RequestOptionsInput
     ): Promise<RequestResponse> {
         return firstValueFrom(this.request(route, optionsInput));
-    }
-
-    protected isStatusAllowed(
-        status: number,
-        options: RequestOptions
-    ): boolean {
-        return (
-            (options.allowedStatues?.length &&
-                options.allowedStatues.includes(status)) ||
-            (!options.onlyAllowedStatuses && status >= 200 && status < 300)
-        );
-    }
-
-    protected getStatusText(status: number): string {
-        return status in HTTPStatus ? HTTPStatus[status] : "UNKNOWN";
-    }
-
-    /**
-     * Normalizes request options input into a consistent format, merging with defaults.
-     * @param options The options to normalize
-     * @returns The normalized options
-     */
-    protected normalizeRequestOptions(
-        options: RequestOptionsInput = {}
-    ): RequestOptions {
-        const { headers, allowedStatues, contentType, ...rest } = options;
-        const {
-            headers: defaultHeaders,
-            allowedStatues: defaultAllowedStatuses,
-            contentType: defaultContentType,
-            ...defaults
-        } = this.options.defaults ?? {};
-
-        const normalizeHeaders = [
-            ...RequestAdapter.normalizeHeaders(defaultHeaders),
-            ...RequestAdapter.normalizeHeaders(headers),
-        ];
-
-        const contentTypeHeader = contentType ?? defaultContentType;
-        if (contentTypeHeader) {
-            normalizeHeaders.unshift(["Content-Type", contentTypeHeader]);
-        }
-
-        return {
-            method: HTTPMethod.GET,
-            ...defaults,
-            ...rest,
-            headers: normalizeHeaders,
-            allowedStatues: [
-                ...(defaultAllowedStatuses ?? []),
-                ...(allowedStatues ?? []),
-            ],
-        };
-    }
-
-    protected normalizeResponse<TBody>(
-        { url, ...response }: RequestResponseInput<TBody>,
-        request: Omit<RequestResponse["request"], "url">
-    ): RequestResponse<TBody> {
-        return {
-            ...response,
-            statusText: this.getStatusText(response.status),
-            success: this.isStatusAllowed(response.status, request.options),
-            headersObject: RequestAdapter.createHeaderObject(response.headers),
-            request: {
-                ...request,
-                url,
-            },
-        };
     }
 
     /**

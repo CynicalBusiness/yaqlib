@@ -1,4 +1,4 @@
-import { RequestResponse } from "./request.types.js";
+import { RequestResponse } from "./request-response.js";
 
 export class RequestError extends Error {
     public constructor(
