@@ -1,5 +1,6 @@
 import {
     defer,
+    firstValueFrom,
     map,
     Observable,
     ObservableInput,
@@ -10,7 +11,7 @@ import { HTTPMethod, HTTPStatus } from "./consts.js";
 import { RequestError } from "./request-error.js";
 import {
     RequestHeaderEntry,
-    RequestHeaderValue,
+    RequestHeaderInput,
     RequestOptions,
     RequestOptionsInput,
     RequestResponse,
@@ -40,35 +41,69 @@ export interface RequestAdapterOptions {
 export abstract class RequestAdapter {
     /**
      * Normalizes the input headers object into a single consistent format: an iterable of [key, value, options?] tuples.
+     *
+     * Accepts:
+     * - An object of either a header value (as a string) or a tuple of [value, options?] for each header.
+     * - An iterable of either:
+     *   - An object like above
+     *   - A tuple of [header, value, options?] for each header
+     *
      * @param headers The headers to normalize
      * @returns The normalized headers
      */
     public static *normalizeHeaders(
-        headers: RequestOptionsInput["headers"]
+        headers: RequestHeaderInput | null | undefined
     ): Generator<RequestHeaderEntry> {
         if (!headers) return;
+        if (typeof headers !== "object") {
+            throw new TypeError("Headers must be an object or array");
+        }
 
-        if (Symbol.iterator in headers) {
-            for (const headerEntry of headers) {
-                if (Array.isArray(headerEntry)) {
-                    yield headerEntry;
-                } else {
-                    yield* this.normalizeHeaderRecord(headerEntry);
-                }
+        if (!(Symbol.iterator in headers)) {
+            return yield* this.normalizeHeaders(Object.entries(headers));
+        }
+
+        for (let [key, entry, options] of headers) {
+            if (typeof key !== "string") {
+                key = String(key);
             }
-        } else {
-            yield* this.normalizeHeaderRecord(headers);
+
+            if (Array.isArray(entry)) {
+                const [value, opts] = entry;
+                entry = value;
+                options = opts;
+            }
+
+            if (typeof entry !== "string") {
+                entry = String(entry);
+            }
+
+            yield [key, entry, options];
         }
     }
 
-    private static *normalizeHeaderRecord(
-        input: Record<string, string | RequestHeaderValue>
-    ): Generator<RequestHeaderEntry> {
-        for (const [header, value] of Object.entries(input)) {
-            yield typeof value === "string"
-                ? [header, value]
-                : [header, ...value];
+    /**
+     * Creates an object from the stream of headers, grouping them by header name in order of appearance.
+     *
+     * For example, the headers `[['a', '1'], ['b', '2'], ['a', '3']]` would be converted to
+     * `{ a: ['1', '3'], b: ['2'] }`.
+     *
+     * @param headers The headers to convert
+     * @returns The headers as an object
+     */
+    public static createHeaderObject<const T extends [string, string | number]>(
+        headers: Iterable<T>
+    ) {
+        if (!(Symbol.iterator in headers)) {
+            throw new TypeError("Headers must be an iterable");
         }
+
+        return Iterator.from(headers).reduce((o, [key, value]) => {
+            if (typeof value !== "string") value = String(value);
+            const prev = o[key];
+            o[key] = prev?.length ? [...prev, value] : [value];
+            return o;
+        }, {} as Record<string, readonly [string, ...string[]]>);
     }
 
     /**
@@ -89,7 +124,7 @@ export abstract class RequestAdapter {
      */
     public request(
         route: string,
-        optionsInput: RequestOptionsInput
+        optionsInput?: RequestOptionsInput
     ): Observable<RequestResponse> {
         const options = this.normalizeRequestOptions(optionsInput);
         return defer(() => this.executeRequest(route, options)).pipe(
@@ -104,6 +139,22 @@ export abstract class RequestAdapter {
             }),
             shareReplay(1)
         );
+    }
+
+    /**
+     * Immediately initiates a request and returns a promise of the response.
+     *
+     * This is a convenience method for calling `firstValueFrom` on the result of {@link request}.
+     *
+     * @param route The route to request
+     * @param optionsInput The request to perform
+     * @returns The response of the request, as a promise.
+     */
+    public requestImmediate(
+        route: string,
+        optionsInput?: RequestOptionsInput
+    ): Promise<RequestResponse> {
+        return firstValueFrom(this.request(route, optionsInput));
     }
 
     protected isStatusAllowed(
@@ -127,7 +178,7 @@ export abstract class RequestAdapter {
      * @returns The normalized options
      */
     protected normalizeRequestOptions(
-        options: RequestOptionsInput
+        options: RequestOptionsInput = {}
     ): RequestOptions {
         const { headers, allowedStatues, contentType, ...rest } = options;
         const {
@@ -167,11 +218,7 @@ export abstract class RequestAdapter {
             ...response,
             statusText: this.getStatusText(response.status),
             success: this.isStatusAllowed(response.status, request.options),
-            headersObject: Iterator.from(response.headers).reduce((o, next) => {
-                const prev = o[next[0]];
-                o[next[0]] = prev?.length ? [...prev, next[1]] : [next[1]];
-                return o;
-            }, {} as RequestResponse["headersObject"]),
+            headersObject: RequestAdapter.createHeaderObject(response.headers),
             request: {
                 ...request,
                 url,

@@ -45,10 +45,16 @@ export interface RequestOptions {
     onlyAllowedStatuses?: boolean;
 }
 
+export type RequestHeaderEntryInput = [
+    string | number,
+    options?: RequestHeaderOptions
+];
+
 export type RequestHeaderInput =
-    | Record<string, string | RequestHeaderValue>
+    | Record<string | number, string | number | RequestHeaderEntryInput>
     | Iterable<
-          RequestHeaderEntry | Record<string, string | RequestHeaderValue>
+          | [string | number, ...RequestHeaderEntryInput]
+          | [string | number, string | number | RequestHeaderEntryInput]
       >;
 
 export interface RequestOptionsInput

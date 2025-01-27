@@ -15,7 +15,14 @@ module.exports = [
     },
 
     {
-        ignores: ["**/dist"],
+        ignores: [
+            "**/dist",
+            // turn off eslint for test files
+            "*.spec.ts",
+            "*.spec.tsx",
+            "*.spec.js",
+            "*.spec.jsx",
+        ],
     },
     {
         files: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
