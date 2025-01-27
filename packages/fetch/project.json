@@ -1,5 +1,5 @@
 {
-    "name": "@yaqlib/fetch",
+    "name": "fetch",
     "$schema": "../../node_modules/nx/schemas/project-schema.json",
     "sourceRoot": "packages/fetch/src",
     "projectType": "library",

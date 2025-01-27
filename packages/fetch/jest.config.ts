@@ -9,5 +9,5 @@ export default {
         ],
     },
     moduleFileExtensions: ["ts", "js", "html"],
-    coverageDirectory: "../../coverage/packages/@yaqlib/fetch",
+    coverageDirectory: "../../coverage/packages/fetch",
 };
